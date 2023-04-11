@@ -1,0 +1,14 @@
+[build]
+rustflags = ["-C", "target-cpu=native", "-C"]
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "linker=clang", "-C", "link-arg=-fuse-ld=lld", "-C", "target-cpu=native"]
+
+[registries.crates-io]
+protocol = "sparse"
+
+[profile.release]
+debug = false
+lto = true
+strip = true
+codegen-units = 1
