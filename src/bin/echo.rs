@@ -4,7 +4,7 @@ use color_eyre::eyre::Context;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 
-use dist_sys_challenge::{main_loop, Body, Init, Message, Node};
+use dist_sys_challenge::{main_loop, Init, Message, Node};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -19,7 +19,7 @@ struct EchoNode {
 }
 
 impl Node<(), Payload> for EchoNode {
-    fn extract_init(&mut self, input: Message<Payload>) -> Result<Self>
+    fn extract_init(&mut self, _input: Message<Payload>) -> Result<Self>
     where
         Self: Sized,
     {
@@ -31,17 +31,11 @@ impl Node<(), Payload> for EchoNode {
     }
 
     fn step(&mut self, input: Message<Payload>, output: &mut StdoutLock) -> Result<()> {
-        match input.body.payload {
+        let mut reply = input.into_reply(Some(&mut self.id));
+
+        match reply.body.payload {
             Payload::Echo { echo } => {
-                let reply = Message {
-                    src: input.dst,
-                    dst: input.src,
-                    body: Body {
-                        id: Some(self.id),
-                        in_reply_to: input.body.id,
-                        payload: Payload::EchoOk { echo },
-                    },
-                };
+                reply.body.payload = Payload::EchoOk { echo };
                 serde_json::to_writer(&mut *output, &reply).context("serialize response to ")?;
                 output.write_all(b"\n").context("write trailing newline")?;
                 self.id += 1;

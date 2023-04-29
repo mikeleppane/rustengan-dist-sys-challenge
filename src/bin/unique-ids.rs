@@ -4,7 +4,7 @@ use color_eyre::eyre::Context;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 
-use dist_sys_challenge::{main_loop, Body, Init, Message, Node};
+use dist_sys_challenge::{main_loop, Init, Message, Node};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -23,7 +23,7 @@ struct UniqueNode {
 }
 
 impl Node<(), Payload> for UniqueNode {
-    fn extract_init(&mut self, input: Message<Payload>) -> Result<Self> {
+    fn extract_init(&mut self, _input: Message<Payload>) -> Result<Self> {
         todo!()
     }
 
@@ -35,18 +35,11 @@ impl Node<(), Payload> for UniqueNode {
     }
 
     fn step(&mut self, input: Message<Payload>, output: &mut StdoutLock) -> Result<()> {
-        match input.body.payload {
+        let mut reply = input.into_reply(Some(&mut self.id));
+        match reply.body.payload {
             Payload::Generate => {
                 let guid = format!("{}-{}", self.node, self.id);
-                let reply = Message {
-                    src: input.dst,
-                    dst: input.src,
-                    body: Body {
-                        id: Some(self.id),
-                        in_reply_to: input.body.id,
-                        payload: Payload::GenerateOk { guid },
-                    },
-                };
+                reply.body.payload = Payload::GenerateOk { guid };
                 serde_json::to_writer(&mut *output, &reply)
                     .context("serialize response to init")?;
                 output.write_all(b"\n").context("write trailing newline")?;
