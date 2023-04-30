@@ -4,7 +4,7 @@ use color_eyre::eyre::Context;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 
-use dist_sys_challenge::{main_loop, Init, Message, Node};
+use dist_sys_challenge::{main_loop, Event, Init, Message, Node};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -27,14 +27,21 @@ impl Node<(), Payload> for UniqueNode {
         todo!()
     }
 
-    fn from_init(_state: (), init: Init) -> Result<Self> {
+    fn from_init(
+        _state: (),
+        init: Init,
+        _tx: std::sync::mpsc::Sender<Event<Payload>>,
+    ) -> Result<Self> {
         Ok(UniqueNode {
             node: init.node_id,
             id: 1,
         })
     }
 
-    fn step(&mut self, input: Message<Payload>, output: &mut StdoutLock) -> Result<()> {
+    fn step(&mut self, input: Event<Payload>, output: &mut StdoutLock) -> Result<()> {
+        let Event::Message(input) = input else {
+            panic!("got injected event when there's no event injection")
+        };
         let mut reply = input.into_reply(Some(&mut self.id));
         match reply.body.payload {
             Payload::Generate => {
@@ -52,5 +59,5 @@ impl Node<(), Payload> for UniqueNode {
 }
 
 fn main() -> Result<()> {
-    main_loop::<_, UniqueNode, _>(())
+    main_loop::<_, UniqueNode, _, _>(())
 }

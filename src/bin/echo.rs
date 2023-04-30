@@ -4,7 +4,7 @@ use color_eyre::eyre::Context;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 
-use dist_sys_challenge::{main_loop, Init, Message, Node};
+use dist_sys_challenge::{main_loop, Event, Init, Message, Node};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -26,11 +26,18 @@ impl Node<(), Payload> for EchoNode {
         todo!()
     }
 
-    fn from_init(_state: (), _init: Init) -> Result<Self> {
+    fn from_init(
+        _state: (),
+        _init: Init,
+        _tx: std::sync::mpsc::Sender<Event<Payload>>,
+    ) -> Result<Self> {
         Ok(EchoNode { id: 1 })
     }
 
-    fn step(&mut self, input: Message<Payload>, output: &mut StdoutLock) -> Result<()> {
+    fn step(&mut self, input: Event<Payload>, output: &mut StdoutLock) -> Result<()> {
+        let Event::Message(input) = input else {
+            panic!("got injected event when there's no event injection")
+        };
         let mut reply = input.into_reply(Some(&mut self.id));
 
         match reply.body.payload {
@@ -47,5 +54,5 @@ impl Node<(), Payload> for EchoNode {
 }
 
 fn main() -> Result<()> {
-    main_loop::<_, EchoNode, _>(())
+    main_loop::<_, EchoNode, _, _>(())
 }
