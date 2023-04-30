@@ -89,6 +89,7 @@ impl Node<(), Payload, InjectedPayload> for BroadcastNode {
                             .copied()
                             .partition(|m| !n_knows.contains(m));
                         let mut rng = rand::thread_rng();
+
                         let additional_cap = (10 * notify_of.len() / 100) as u32;
                         notify_of.extend(already_known.iter().filter(|_| {
                             rng.gen_ratio(
